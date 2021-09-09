@@ -1,4 +1,3 @@
-# OpenCV 첫 수업
 import math
 from tkinter import *
 from tkinter.colorchooser import *
@@ -135,6 +134,70 @@ def reverseImage():
     displayImage()
 
 
+### <----- 마우스 클릭 관련  ----> ###
+def mouseClick_reverseImage():
+    global window, canvas, paper, filename, m_InputImage, m_OutputImage, m_inH, m_inW, m_outH, m_outW
+    global sx, sy, ex, ey
+    # 마우스 이벤트 받을 준비 시키기
+    canvas.bind("<Button-1>", leftClickMouse)
+    canvas.bind("<ButtonRelease-1>", leftDropMouse_reverseImage)
+    canvas.bind("<B1-Motion>", leftMoveMouse) # 움직임대로 상자 그려짐
+
+
+def leftClickMouse(event):
+    global window, canvas, paper, filename, m_InputImage, m_OutputImage, m_inH, m_inW, m_outH, m_outW
+    global sx, sy, ex, ey
+    sx = event.x
+    sy = event.y
+
+# 클릭마우스의 움직임 대로 상자 그려짐
+def leftMoveMouse(event):
+    global window, canvas, paper, filename, m_InputImage, m_OutputImage, m_inH, m_inW, m_outH, m_outW
+    global sx, sy, ex, ey, boxLine
+    ex = event.x
+    ey = event.y
+    # 이전 박스 지우기
+    if boxLine == None:
+        pass
+    else:
+        canvas.delete(boxLine)
+
+    boxLine = canvas.create_rectangle(sx, sy, ex, ey, fill=None)
+
+
+def leftDropMouse_reverseImage(event):
+    global window, canvas, paper, filename, m_InputImage, m_OutputImage, m_inH, m_inW, m_outH, m_outW
+    global sx, sy, ex, ey
+    ex = event.x
+    ey = event.y
+    # 알고리즘에 맞게 드래그박스 위치 지정
+    if sx > ex:
+        sx, ex = ex, sx
+    if sy > ey:
+        sy, ey = ey, sy
+    reverseImage_Click()
+    canvas.unbind("<Button-1>")
+    canvas.unbind("<ButtonRelease-1>")
+
+
+def reverseImage_Click():
+    global window, canvas, paper, filename, m_InputImage, m_OutputImage, m_inH, m_inW, m_outH, m_outW
+    global sx, sy, ex, ey, boxLine
+    # (중요!) 출력 영상 크기 결정 --> 알고리즘에 따름
+    m_outH = m_inH
+    m_outW = m_inW
+    # 출력 메모리 할당
+    m_OutputImage = malloc3D(m_outH, m_outW)
+    ## 진짜 영상처리 알고리즘
+    for rgb in range(RGB):
+        for i in range(m_inH):
+            for k in range(m_inW):
+                if (sx <= k <= ex) and (sy <= i <= ey):
+                    m_OutputImage[rgb][i][k] = 255 - m_InputImage[rgb][i][k]
+                else:
+                    m_OutputImage[rgb][i][k] = m_InputImage[rgb][i][k]
+    displayImage()
+
 ### OpenCV용 함수
 #### 결과를 화면출력으로 보내기
 def cv2OutImage():
@@ -146,17 +209,17 @@ def cv2OutImage():
     m_OutputImage = malloc3D(m_outH, m_outW)
     # 3차원 스케일
     # if not m_OutputImage[RR]:
-    if cvOutPhoto.ndim > 2: # ndim : 넘파이 차원수 확인
-        for i in range(m_inH):
-            for k in range(m_inW):
+    if cvOutPhoto.ndim > 2:  # ndim : 넘파이 차원수 확인
+        for i in range(m_outH):
+            for k in range(m_outW):
                 m_OutputImage[RR][i][k] = cvOutPhoto.item(i, k, BB)
                 m_OutputImage[GG][i][k] = cvOutPhoto.item(i, k, GG)
                 m_OutputImage[BB][i][k] = cvOutPhoto.item(i, k, RR)
     # 단일 스케일
     # elif m_OutputImage[RR]:
     else:
-        for i in range(m_inH):
-            for k in range(m_inW):
+        for i in range(m_outH):
+            for k in range(m_outW):
                 m_OutputImage[RR][i][k] = cvOutPhoto.item(i, k)
                 m_OutputImage[GG][i][k] = cvOutPhoto.item(i, k)
                 m_OutputImage[BB][i][k] = cvOutPhoto.item(i, k)
@@ -172,19 +235,21 @@ def grayImage_cv():
     cv2OutImage()
     displayImage()
 
+
 #### 엠보싱처리_OpenCV
 def embossImage_cv():
     global window, canvas, paper, m_InputImage, m_OutputImage, m_inH, m_inW, m_outH, m_outW, RGB, RR, GG, BB
     global cvInPhoto, cvOutPhoto
     ## OpenCV용 알고리즘 ##
-    mask = np.zeros((3,3), np.float32)
+    mask = np.zeros((3, 3), np.float32)
     mask[0][0] = -1.0
     mask[2][2] = 1.0
     cvOutPhoto = cv2.filter2D(cvInPhoto, -1, mask)
-    cvOutPhoto += 127 # 넘파이배열은 이렇게 간단하게 전부 계산처리 가능
+    cvOutPhoto += 127  # 넘파이배열은 이렇게 간단하게 전부 계산처리 가능
     ## 화면출력
     cv2OutImage()
     displayImage()
+
 
 #### 카툰이미지처리_OpenCV
 def cartoonImage_cv():
@@ -200,6 +265,7 @@ def cartoonImage_cv():
     cv2OutImage()
     displayImage()
 
+
 ## 전역 변수
 ### 윈도우창, 캔버스, 이미지용 화면
 window, canvas, paper = None, None, None
@@ -210,6 +276,9 @@ m_inH, m_inW, m_outH, m_outW = [0] * 4
 RGB, RR, GG, BB = 3, 0, 1, 2
 ### OpenCV 변수
 cvInPhoto, cvOutPhoto = None, None
+### 마우스 관련
+sx, sy, ex, ey = [-1] * 4
+boxLine = None
 
 ## 메인
 window = Tk()
@@ -231,6 +300,8 @@ fileMenu.add_command(label="종료", command=None)
 pxpointMenu = Menu(mainMenu)
 mainMenu.add_cascade(label="화소점필터", menu=pxpointMenu)
 pxpointMenu.add_command(label="동일", command=equalImage)
+pxpointMenu.add_command(label="반전", command=reverseImage)
+pxpointMenu.add_command(label="지정 반전", command=mouseClick_reverseImage)
 
 #### 메뉴창_OpenCV용 메뉴
 openCVMenu = Menu(mainMenu)
